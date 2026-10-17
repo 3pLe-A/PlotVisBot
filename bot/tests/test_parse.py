@@ -15,6 +15,18 @@ def test_kinds(text, kind):
     assert parse_math(text).kind == kind
 
 
+@pytest.mark.parametrize("text,kind", SHARED["timed"].items())
+def test_shapes_in_time(text, kind):
+    spec = parse_math(text)
+    assert (spec.kind, spec.time) == (kind, "t")
+
+
+def test_morph_runs_from_0_to_1():
+    spec = parse_math("morph(r = 2, (sqrt(x^2+y^2) - 2)^2 + z^2 = 0.5)")
+    assert spec.ranges["t"] == [0.0, 1.0]
+    assert spec.latex.startswith("(1 - t)")
+
+
 def test_ode_parameters_and_ranges():
     spec = parse_math(r"x(t) = A e^{-\lambda_1 t} + B e^{-\lambda_2 t}, A=2, B=-1, t in [0, 5]")
     assert spec.params == {"A": 2.0, "B": -1.0, "lamda_1": 1.0, "lamda_2": 1.0}

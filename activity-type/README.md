@@ -23,6 +23,10 @@ Prompts are written the same way as in the bot version: LaTeX, plain math or Mat
 | `((R + cos v) cos u, (R + cos v) sin u, sin v)` | parametric surface |
 | `u(x,t) = A sin(k x - omega t)` | 1D + time: animated profile plus a spacetime (x, t) diagram |
 | `u = exp(-(x^2+y^2)/(1+D t)) cos(omega t)` | 2D + time: animated heatmap |
+| `r = 1 + a sin(t) sin(3 theta) sin(4 phi)` | 3D figure changing shape in time, still rotatable while it plays |
+| `morph(r = 2, (sqrt(x^2+y^2) - 2)^2 + z^2 = 0.5)` | one figure turning into another (here a sphere into a torus) as t goes from 0 to 1 |
+
+Any curve, surface or implicit figure may contain `t`, which then acts as time and gets the time slider; see [Shapes that change in time](../README.md#shapes-that-change-in-time).
 
 You can add `, A=2` to set a starting value and `, x in [0, 10]` to set a range. Ranges can also be edited in the side panel, and each slider's min and max can be changed there too.
 

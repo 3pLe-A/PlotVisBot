@@ -38,8 +38,18 @@ Each bot has its own README with setup steps, its own `.env.example` and its own
 | `(cos(u) sin(v), sin(u) sin(v), cos(v))` | parametric surface |
 | `u(x,t) = sin(x - c t)` | 1 space dimension and 1 time dimension, with a spacetime diagram |
 | `u = exp(-(x^2+y^2)/(1+t)) cos(omega t)` | 2 space dimensions and 1 time dimension |
+| `x^2 + y^2 + z^2 = (2 + sin t)^2` | a 3D figure that changes shape in time |
+| `morph(x^2 + y^2 + z^2 = 4, max(abs(x), abs(y), abs(z)) = 1.5)` | one figure turning into another (here a sphere into a cube) |
 
 Every symbol that isn't a coordinate (`x y z t r theta phi`) becomes an adjustable parameter. You can add `, A=2` to set a starting value and `, x in [0, 10]` to set a range.
+
+### Shapes that change in time
+
+Any curve, surface or implicit figure above may also contain `t`, which then acts as time: the Activity gets a time slider with play and pause, and the bot posts a GIF. For example, `r = 1 + 0.3 sin(t) sin(3 theta) sin(4 phi)` is a sphere whose bumps grow and shrink, and `y = A exp(-g t) sin(k x)` is a sinusoid that fades (or grows when `g < 0`). In parametric curves `t` is the curve parameter, so a moving curve uses `s` for the parameter: `x = cos(3s), y = sin(2s + t)`.
+
+`morph(F1, F2)` turns one figure into another while `t` goes from 0 to 1. Both figures are written as equations, and the plot is the surface (or curve) `(1 - t) F1 + t F2 = 0`, where `F` is the left side minus the right side. Figures of the same topology, such as a cube and a sphere, deform smoothly into each other. Between different topologies, such as a sphere and a torus, the surface has to tear at one moment, as topology says it must.
+
+This is a 2D analogue of the idea behind the Poincaré conjecture, not the conjecture itself. The conjecture concerns closed three-dimensional manifolds, which need four dimensions to embed, and its proof deforms a metric by Ricci flow rather than a shape in space.
 
 ## Tests
 

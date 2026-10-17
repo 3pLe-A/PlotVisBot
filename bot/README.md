@@ -20,6 +20,10 @@ The other bot in this repository, [`activity-type`](../activity-type), is the Di
 | `((2 + cos v) cos u, (2 + cos v) sin u, sin v)` | parametric surface |
 | `u(x,t) = sin(x - c t)` | 1D + time: animated GIF plus a spacetime (x, t) diagram |
 | `u = exp(-(x^2+y^2)/(1+t)) cos(omega t)` | 2D + time: animated heatmap |
+| `x^2 + y^2 + z^2 = (2 + sin t)^2` | 3D figure changing shape in time: animated GIF |
+| `morph(x^2 + y^2 = 4, abs(x) + abs(y) = 2)` | one figure turning into another as t goes from 0 to 1 |
+
+Any curve, surface or implicit figure may contain `t`, which then acts as time and the reply is a GIF; see [Shapes that change in time](../README.md#shapes-that-change-in-time).
 
 The coordinates are `x y z t r theta phi` (and `u v s` in parametric forms). Every other letter or Greek name is a parameter with its own buttons, starting at 1. You can add clauses after a comma:
 

@@ -19,7 +19,10 @@ def test_static(text):
     assert name == "plot.png" and data.startswith(PNG)
 
 
-@pytest.mark.parametrize("text", ["u(x,t) = sin(x - c t)", "u = exp(-(x^2+y^2)/(1+t)) cos(omega t)"])
+@pytest.mark.parametrize("text", [
+    "u(x,t) = sin(x - c t)", "u = exp(-(x^2+y^2)/(1+t)) cos(omega t)", "x^2 + y^2 + z^2 = (2 + sin(t))^2",
+    "r = 1 + 0.3 sin(t) sin(3 theta) sin(4 phi)", "morph(x^2 + y^2 = 4, abs(x) + abs(y) = 2)",
+])
 def test_animated(text):
     data, name = render_json(parse_math(text).to_json())
     assert name == "plot.gif" and data.startswith(GIF) and len(data) < 10 * 1024 * 1024

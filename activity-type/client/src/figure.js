@@ -61,7 +61,65 @@ function cached(key, make) {
   return cache.get(key);
 }
 
+// A shape that changes in time (any kind except the two field animations):
+// draw it at the current moment, on axes fixed over the whole time range.
+const shapeInTime = (spec) => Boolean(spec.time) && spec.kind !== "anim1d" && spec.kind !== "anim2d";
+
 export function buildFigure(spec, params, time) {
+  if (!shapeInTime(spec)) return figureAt(spec, params, time);
+  const fig = figureAt(spec, { ...params, [spec.time]: time }, time);
+  const bounds = cached(JSON.stringify(["bounds", spec.source, spec.ranges, params]), () => sampleBounds(spec, params));
+  const { layout } = fig;
+  if (layout.scene) {
+    for (const [i, ax] of ["xaxis", "yaxis", "zaxis"].entries()) layout.scene[ax].range = bounds[i];
+    if (layout.scene.aspectmode === "data") {
+      const span = bounds.map(([lo, hi]) => hi - lo);
+      const m = Math.max(...span);
+      layout.scene.aspectmode = "manual";
+      layout.scene.aspectratio = { x: span[0] / m, y: span[1] / m, z: span[2] / m };
+    }
+  } else {
+    layout.xaxis.range = bounds[0];
+    layout.yaxis.range = bounds[1];
+  }
+  return fig;
+}
+
+// Axis ranges covering the shape at a few moments of its time range.
+function sampleBounds(spec, params) {
+  const R = spec.ranges;
+  if (spec.kind === "implicit2d") return [R.x, R.y];
+  const lo = [Infinity, Infinity, Infinity];
+  const hi = [-Infinity, -Infinity, -Infinity];
+  for (const t of linspace(...R[spec.time], 9)) {
+    let trace;
+    try { trace = figureAt(spec, { ...params, [spec.time]: t }, t).data[0]; } catch { continue; }
+    if (spec.kind === "implicit3d") {
+      // Grid points on the negative side of F = 0 bound the surface (or the
+      // positive side, when the negative side is the outside).
+      const neg = trace.value.map((v) => v <= 0);
+      const count = neg.filter(Boolean).length;
+      const side = count && count < neg.length / 2 ? neg : neg.map((b) => !b);
+      ["x", "y", "z"].forEach((k, i) => trace[k].forEach((v, j) => {
+        if (side[j]) { lo[i] = Math.min(lo[i], v); hi[i] = Math.max(hi[i], v); }
+      }));
+      continue;
+    }
+    ["x", "y", "z"].forEach((k, i) => {
+      for (const v of [trace[k] ?? []].flat(2)) {
+        if (Number.isFinite(v)) { lo[i] = Math.min(lo[i], v); hi[i] = Math.max(hi[i], v); }
+      }
+    });
+  }
+  if (!Number.isFinite(lo[0])) throw new Error("nothing to draw at any moment in this time range");
+  return lo.map((l, i) => {
+    if (!Number.isFinite(l)) return undefined;
+    const pad = 0.05 * (hi[i] - l || 1);
+    return [l - pad, hi[i] + pad];
+  }).filter(Boolean);
+}
+
+function figureAt(spec, params, time) {
   const th = theme();
   const f = spec.exprs.map((e) => compile(spec, e));
   const R = spec.ranges;

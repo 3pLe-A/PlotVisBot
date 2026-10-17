@@ -122,7 +122,8 @@ export function normalise(text) {
   for (const [a, b] of [["−", "-"], ["–", "-"], ["·", "*"], ["×", "*"], ["÷", "/"], ["²", "^2"], ["³", "^3"],
     ["√", "sqrt"], ["≤", "<="], ["≥", ">="], ["∈", " in "]]) s = s.replaceAll(a, b);
   for (const [g, name] of Object.entries(GREEK_UNICODE)) s = s.replaceAll(g, ` ${name} `);
-  if (s.includes("\\") || s.includes("$")) s = latexToPlain(s);
+  // e^{-0.2 t} is LaTeX even without a backslash
+  if (s.includes("\\") || s.includes("$") || s.includes("{")) s = latexToPlain(s);
   s = s.replace(/\b([A-Z][a-z]+)\[/g, (_, f) => `${f.toLowerCase()}[`).replace(/\bPi\b/g, "pi");
   s = callBrackets(s);
   // "cos t" -> "cos(t)"
@@ -149,7 +150,7 @@ function splitTop(src) {
 }
 
 function checkIdentifiers(text) {
-  if (/[^\w\s+\-*/^().<>=!]/.test(text) || text.includes("__")) {
+  if (/[^\w\s+\-*/^().,<>=!]/.test(text) || text.includes("__")) {
     throw new MathParseError(`unsupported characters in: ${text}`);
   }
   for (const [name] of text.matchAll(/[A-Za-z_][A-Za-z0-9_]*/g)) {
@@ -232,12 +233,15 @@ export function parseMath(text) {
   const ranges = {};
   const assigned = {};
   let items = [];
+  let morph = false;
   for (const clause of splitTop(s)) {
     let m = /^([A-Za-z]\w*)\s+in\s*[[(]\s*(.+?)\s*,\s*(.+?)\s*[\])]$/.exec(clause) ||
       /^([A-Za-z]\w*)\s*=\s*(.+?)\s*\.\.\s*(.+)$/.exec(clause);
     if (m) { ranges[m[1]] = [number(m[2]), number(m[3])]; continue; }
     m = /^(.+?)\s*<=?\s*([A-Za-z]\w*)\s*<=?\s*(.+)$/.exec(clause);
     if (m && !clause.replaceAll("<=", "").includes("=")) { ranges[m[2]] = [number(m[1]), number(m[3])]; continue; }
+    const mm = /^morph\s*\(([\s\S]+)\)$/i.exec(clause);
+    if (mm) { items.push(morphItem(mm[1])); morph = true; continue; }
     items.push(parseItem(clause));
   }
   const consts = items.filter((it) => it.dep && !COORDS.includes(it.dep) && !it.tuple && freeSymbols(it.rhs).size === 0);
@@ -248,7 +252,8 @@ export function parseMath(text) {
   if (!items.length) throw new MathParseError("nothing to plot");
 
   const spec = classify(items);
-  spec.latex = toLatex(items, spec);
+  spec.latex = morph && items.length === 1 ? items[0].tex : toLatex(items, spec);
+  if (morph && !ranges.t) ranges.t = [0, 1];
   spec.source = text.trim();
   spec.ranges = {};
   for (const name of coordNames(spec)) {
@@ -297,11 +302,16 @@ function explicit(dep, rhs) {
   const v = coordsIn(rhs);
   v.delete(dep);
   const e = [rhs.toString()];
-  if (dep === "r" && (v.size === 0 || setEq(v, ["theta"]))) return { kind: "polar", exprs: e, axes: ["theta"], dep };
-  if (dep === "r" && (setEq(v, ["theta", "phi"]) || setEq(v, ["phi"]))) {
-    return { kind: "spherical", exprs: e, axes: ["theta", "phi"], dep };
+  // A shape that changes in time: the same kind as without t, with t as time.
+  const time = v.has("t") && v.size > 1 ? "t" : undefined;
+  const space = new Set([...v].filter((n) => n !== "t"));
+  if (dep === "r" && (v.size === 0 || setEq(v, ["theta"]) || (time && setEq(space, ["theta"])))) {
+    return { kind: "polar", exprs: e, axes: ["theta"], dep, time };
   }
-  if (setEq(v, ["r", "theta"]) || setEq(v, ["r"])) return { kind: "cylindrical", exprs: e, axes: ["r", "theta"], dep };
+  if (dep === "r" && (setEq(space, ["theta", "phi"]) || setEq(space, ["phi"]))) {
+    return { kind: "spherical", exprs: e, axes: ["theta", "phi"], dep, time };
+  }
+  if (setEq(space, ["r", "theta"]) || setEq(v, ["r"])) return { kind: "cylindrical", exprs: e, axes: ["r", "theta"], dep, time };
   if (setEq(v, ["x", "t"]) || setEq(v, ["r", "t"])) {
     return { kind: "anim1d", exprs: e, axes: [v.has("x") ? "x" : "r"], time: "t", dep };
   }
@@ -316,10 +326,10 @@ function explicit(dep, rhs) {
   throw new MathParseError("too many independent variables");
 }
 
-function toCartesian(node) {
+function toCartesian(node, threeD = undefined) {
   const names = freeSymbols(node);
   if (!names.has("r") && !names.has("theta") && !names.has("phi")) return node;
-  const sub = names.has("phi")
+  const sub = (threeD ?? names.has("phi"))
     ? { r: "sqrt(x^2+y^2+z^2)", theta: "acos(z/sqrt(x^2+y^2+z^2))", phi: "atan2(y,x)" }
     : { r: "sqrt(x^2+y^2)", theta: "atan2(y,x)" };
   return node.transform((c) => (c.isSymbolNode && sub[c.name] ? new math.ParenthesisNode(parse(sub[c.name])) : c));
@@ -328,18 +338,40 @@ function toCartesian(node) {
 function implicit(f) {
   const g = toCartesian(f);
   const v = coordsIn(g);
-  if ([...v].every((n) => n === "x" || n === "y")) return { kind: "implicit2d", exprs: [g.toString()], axes: ["x", "y"] };
-  if ([...v].every((n) => "xyz".includes(n))) return { kind: "implicit3d", exprs: [g.toString()], axes: ["x", "y", "z"] };
-  throw new MathParseError("implicit equations in time are not supported");
+  const time = v.delete("t") ? "t" : undefined;
+  if ([...v].every((n) => n === "x" || n === "y")) return { kind: "implicit2d", exprs: [g.toString()], axes: ["x", "y"], time };
+  if ([...v].every((n) => "xyz".includes(n))) return { kind: "implicit3d", exprs: [g.toString()], axes: ["x", "y", "z"], time };
+  throw new MathParseError("cannot tell which coordinates this equation uses");
+}
+
+// morph(F1, F2): the figure F1 turns into F2 as t goes from 0 to 1. Both figures
+// become implicit functions F = lhs - rhs, and the plot is (1 - t) F1 + t F2 = 0.
+function morphItem(inner) {
+  const parts = splitTop(inner);
+  if (parts.length !== 2) throw new MathParseError("morph needs two figures: morph(F1, F2)");
+  const sides = parts.map((part) => {
+    const it = parseItem(part);
+    if (it.tuple) throw new MathParseError("morph works with equations, not parametric forms");
+    return it.lhs ? new math.OperatorNode("-", "subtract", [it.lhs, new math.ParenthesisNode(it.rhs)]) : it.rhs;
+  });
+  const threeD = sides.some((f) => freeSymbols(f).has("z") || freeSymbols(f).has("phi"));
+  const [f1, f2] = sides.map((f) => toCartesian(f, threeD));
+  const lhs = parse(`(1 - t) * (${f1.toString()}) + t * (${f2.toString()})`);
+  const tex = `(1 - t)\\left[${nodeTex(f1)}\\right] + t\\left[${nodeTex(f2)}\\right] = 0`;
+  return { lhs, rhs: parse("0"), dep: null, tex };
 }
 
 function parametric(comps) {
   if (comps.length !== 2 && comps.length !== 3) throw new MathParseError("parametric form needs 2 or 3 components");
   const names = new Set(comps.flatMap((c) => [...freeSymbols(c)]));
   const exprs = comps.map((c) => c.toString());
-  if (names.has("u") && names.has("v") && comps.length === 3) return { kind: "surface3d", exprs, axes: ["u", "v"] };
+  if (names.has("u") && names.has("v") && comps.length === 3) {
+    return { kind: "surface3d", exprs, axes: ["u", "v"], time: names.has("t") ? "t" : undefined };
+  }
+  const kind = comps.length === 2 ? "parametric2d" : "parametric3d";
+  if (names.has("s") && names.has("t")) return { kind, exprs, axes: ["s"], time: "t" }; // curve parameter s, time t
   for (const p of ["t", "s", "u", "theta", "phi"]) {
-    if (names.has(p)) return { kind: comps.length === 2 ? "parametric2d" : "parametric3d", exprs, axes: [p] };
+    if (names.has(p)) return { kind, exprs, axes: [p] };
   }
   throw new MathParseError("parametric form needs a parameter t (or s, u)");
 }
@@ -405,7 +437,7 @@ export function pretty(name) {
 // --------------------------------------------------------------------------- detection
 
 const KNOWN_WORDS = new Set([...FUNCTIONS, ...GREEK, "where", "with", "frac", "sqrt", "left", "right", "cdot",
-  "times", "quad", "infty", "dfrac", "tfrac", "mathrm", "operatorname"]);
+  "times", "quad", "infty", "dfrac", "tfrac", "mathrm", "operatorname", "morph"]);
 
 export function looksLikeMath(text) {
   const words = (text.match(/[A-Za-zА-Яа-яЁё]{4,}/g) || []).filter((w) => !KNOWN_WORDS.has(w.toLowerCase()));

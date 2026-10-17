@@ -67,6 +67,8 @@ export const EXAMPLES = [
   "z = sin(a x) cos(b y)",
   "u = exp(-(x^2+y^2)/(1+D t)) cos(omega t)",
   "((R + cos v) cos u, (R + cos v) sin u, sin v), R=2, v in [0, 2 pi]",
+  "r = 1 + a sin(t) sin(3 theta) sin(4 phi), a=0.3",
+  "morph(r = 2, (sqrt(x^2+y^2) - 2)^2 + z^2 = 0.5)",
   "затухающий осциллятор с частотой 3",
 ];
 

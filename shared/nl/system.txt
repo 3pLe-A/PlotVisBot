@@ -20,6 +20,10 @@ Shapes the bot understands:
 - (f(u,v), g(u,v), h(u,v))                   parametric surface
 - u(x, t) = f(x, t)                          1D field evolving in time (animated)
 - u(x, y, t) = f(x, y, t)                    2D field evolving in time (animated)
+- any curve, surface or implicit shape above with t in it    the shape changes in time (animated);
+  in a moving parametric curve use s as the curve parameter: (f(s, t), g(s, t))
+- morph(F1(x, y, z) = G1, F2(x, y, z) = G2)  one figure turning into another as t goes from 0 to 1
+- functions also include min, max and atan2 with comma-separated arguments
 
 Rules:
 - Solve differential equations analytically when you can, and plot the solution; keep integration

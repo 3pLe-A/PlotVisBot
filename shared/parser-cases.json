@@ -17,7 +17,9 @@
     "(cos(u) sin(v), sin(u) sin(v), cos(v))": "surface3d",
     "\\frac{x^2}{a^2} + \\frac{y^2}{b^2} = 1": "implicit2d",
     "x² + y² = 4": "implicit2d",
-    "y^2 = x^3 - x": "implicit2d"
+    "y^2 = x^3 - x": "implicit2d",
+    "y = e^{-0.2 t} sin(x)": "anim1d",
+    "z = atan2(y, x)": "explicit3d"
   },
   "rejects": [
     "__import__('os')",
@@ -27,6 +29,20 @@
     "exec(x)",
     "().__class__",
     "import({})",
-    "y = x; process"
-  ]
+    "y = x; process",
+    "morph(x^2 + y^2 = 1)",
+    "morph((cos t, sin t), x^2 + y^2 = 1)"
+  ],
+  "timed": {
+    "x^2 + y^2 + z^2 = (2 + sin(t))^2": "implicit3d",
+    "r = 1 + 0.3 sin(t) sin(3 theta) sin(4 phi)": "spherical",
+    "z = r^2 sin(theta - t)": "cylindrical",
+    "r = 1 + cos(theta - t)": "polar",
+    "x^2/(1+t) + y^2 = 1": "implicit2d",
+    "(cos(u) sin(v), sin(u) sin(v), (1 + 0.5 sin(t)) cos(v))": "surface3d",
+    "x = cos(3s), y = sin(2 s + t)": "parametric2d",
+    "morph(x^2 + y^2 + z^2 = 4, max(abs(x), abs(y), abs(z)) = 1.5)": "implicit3d",
+    "morph(r = 2, (sqrt(x^2+y^2) - 2)^2 + z^2 = 0.5)": "implicit3d",
+    "morph(x^2 + y^2 = 4, abs(x) + abs(y) = 2)": "implicit2d"
+  }
 }

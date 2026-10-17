@@ -11,6 +11,19 @@ for (const [text, kind] of Object.entries(CASES)) {
   test(`kind of ${text}`, () => assert.equal(parseMath(text).kind, kind));
 }
 
+for (const [text, kind] of Object.entries(SHARED.timed)) {
+  test(`${text} changes in time`, () => {
+    const spec = parseMath(text);
+    assert.deepEqual([spec.kind, spec.time], [kind, "t"]);
+  });
+}
+
+test("morph runs from 0 to 1", () => {
+  const spec = parseMath("morph(r = 2, (sqrt(x^2+y^2) - 2)^2 + z^2 = 0.5)");
+  assert.deepEqual(spec.ranges.t, [0, 1]);
+  assert.ok(spec.latex.startsWith("(1 - t)"));
+});
+
 test("ODE parameters, ranges and LaTeX", () => {
   const spec = parseMath("x(t) = A e^{-\\lambda_1 t} + B e^{-\\lambda_2 t}, A=2, B=-1, t in [0, 5]");
   assert.deepEqual(spec.params, { A: 2, B: -1, lambda_1: 1, lambda_2: 1 });

@@ -79,6 +79,7 @@ class Item:
     rhs: sp.Expr
     dep: str | None = None  # dependent name when the LHS is a plain symbol or f(args)
     tuple_: tuple[sp.Expr, ...] | None = None
+    tex: str = ""  # display form, when it differs from lhs = rhs (morph)
 
 
 # --------------------------------------------------------------------------- text normalisation
@@ -149,7 +150,7 @@ def normalise(text: str) -> str:
         s = s.replace(a, b)
     for g, name in GREEK_UNICODE.items():
         s = s.replace(g, f" {name} ")
-    if "\\" in s or "$" in s:
+    if "\\" in s or "$" in s or "{" in s:  # e^{-0.2 t} is LaTeX even without a backslash
         s = latex_to_plain(s)
     # Mathematica: Exp[x] -> exp(x), x[t] -> x(t); Pi, E constants
     s = re.sub(r"\b([A-Z][a-z]+)\[", lambda m: m.group(1).lower() + "[", s)
@@ -247,7 +248,7 @@ def _parse(text: str) -> sp.Expr:
     text = text.strip()
     if not text:
         raise MathParseError("empty expression")
-    if re.search(r"[^\w\s+\-*/^().<>=!]", text) or "__" in text or "." in re.sub(r"\d\.\d|\d\.|\.\d", "", text):
+    if re.search(r"[^\w\s+\-*/^().,<>=!]", text) or "__" in text or "." in re.sub(r"\d\.\d|\d\.|\.\d", "", text):
         raise MathParseError(f"unsupported characters in: {text}")
     text = re.sub(r"\b([xyzt]{2,3})\b", lambda m: "*".join(m.group(1)), text)
     local = _check_identifiers(text)
@@ -317,12 +318,17 @@ def parse_math(text: str) -> PlotSpec:
     ranges: dict[str, tuple[float, float]] = {}
     params: dict[str, float] = {}
     items: list[Item] = []
+    morph = False
     for clause in _split_top(s):
         if m := _RANGE_IN.match(clause) or _RANGE_DOTS.match(clause):
             ranges[_symbol_name(m.group(1))] = (number(m.group(2)), number(m.group(3)))
             continue
         if (m := _RANGE_CHAIN.match(clause)) and "=" not in clause.replace("<=", ""):
             ranges[_symbol_name(m.group(2))] = (number(m.group(1)), number(m.group(3)))
+            continue
+        if m := _MORPH.match(clause):
+            items.append(_morph_item(m.group(1)))
+            morph = True
             continue
         items.append(_parse_item(clause))
     consts = [it for it in items
@@ -334,7 +340,9 @@ def parse_math(text: str) -> PlotSpec:
     if not items:
         raise MathParseError("nothing to plot")
     spec = _classify(items)
-    spec.latex = _latex(items, spec)
+    spec.latex = items[0].tex if morph and len(items) == 1 else _latex(items, spec)
+    if morph:
+        ranges.setdefault("t", (0.0, 1.0))
     for name in spec.coord_names():
         if name in ranges:
             continue
@@ -380,12 +388,15 @@ def _explicit(dep: str, rhs: sp.Expr) -> PlotSpec:
     v = _names(rhs) & set(COORDS)
     v.discard(dep)
     key = frozenset(v)
-    if dep == "r" and key <= {"theta"}:
-        return PlotSpec(kind="polar", exprs=[rhs], axes=["theta"], dep="r")
-    if dep == "r" and key in ({"theta", "phi"}, {"phi"}):
-        return PlotSpec(kind="spherical", exprs=[rhs], axes=["theta", "phi"], dep="r")
-    if key == {"r", "theta"} or key == {"r"}:
-        return PlotSpec(kind="cylindrical", exprs=[rhs], axes=["r", "theta"], dep=dep)
+    # A shape that changes in time: the same kind as without t, with t as time.
+    time = "t" if "t" in key and key != {"t"} else None
+    space = key - {"t"}
+    if dep == "r" and key <= {"theta"} or (time and dep == "r" and space == {"theta"}):
+        return PlotSpec(kind="polar", exprs=[rhs], axes=["theta"], dep="r", time=time)
+    if dep == "r" and space in ({"theta", "phi"}, {"phi"}):
+        return PlotSpec(kind="spherical", exprs=[rhs], axes=["theta", "phi"], dep="r", time=time)
+    if space == {"r", "theta"} or key == {"r"}:
+        return PlotSpec(kind="cylindrical", exprs=[rhs], axes=["r", "theta"], dep=dep, time=time)
     if key in ({"x", "t"}, {"r", "t"}):
         a = "x" if "x" in key else "r"
         return PlotSpec(kind="anim1d", exprs=[rhs], axes=[a], time="t", dep=dep)
@@ -399,12 +410,14 @@ def _explicit(dep: str, rhs: sp.Expr) -> PlotSpec:
     raise MathParseError("too many independent variables")
 
 
-def _to_cartesian(expr: sp.Expr) -> sp.Expr:
+def _to_cartesian(expr: sp.Expr, three_d: bool | None = None) -> sp.Expr:
     x, y, z = (sp.Symbol(n, real=True) for n in "xyz")
     names = _names(expr)
     sub = {}
+    if three_d is None:
+        three_d = "phi" in names
     if "r" in names or "theta" in names or "phi" in names:
-        if "phi" in names:  # spherical, physics convention: theta polar, phi azimuth
+        if three_d:  # spherical, physics convention: theta polar, phi azimuth
             rr = sp.sqrt(x**2 + y**2 + z**2)
             sub = {sp.Symbol("r", real=True): rr, sp.Symbol("theta", real=True): sp.acos(z / rr),
                    sp.Symbol("phi", real=True): sp.atan2(y, x)}
@@ -416,11 +429,38 @@ def _to_cartesian(expr: sp.Expr) -> sp.Expr:
 def _implicit(f: sp.Expr) -> PlotSpec:
     f = _to_cartesian(f)
     v = _names(f) & set(COORDS)
+    time = "t" if "t" in v else None
+    v.discard("t")
     if v <= {"x", "y"}:
-        return PlotSpec(kind="implicit2d", exprs=[f], axes=["x", "y"])
+        return PlotSpec(kind="implicit2d", exprs=[f], axes=["x", "y"], time=time)
     if v <= {"x", "y", "z"}:
-        return PlotSpec(kind="implicit3d", exprs=[f], axes=["x", "y", "z"])
-    raise MathParseError("implicit equations in time are not supported")
+        return PlotSpec(kind="implicit3d", exprs=[f], axes=["x", "y", "z"], time=time)
+    raise MathParseError("cannot tell which coordinates this equation uses")
+
+
+_MORPH = re.compile(r"^morph\s*\((.+)\)$", re.IGNORECASE)
+
+
+def _morph_item(inner: str) -> Item:
+    """morph(F1, F2): the figure F1 turns into F2 as t goes from 0 to 1.
+
+    Both figures become implicit functions F = lhs - rhs, and the plot is the
+    level set (1 - t) F1 + t F2 = 0.
+    """
+    parts = _split_top(inner)
+    if len(parts) != 2:
+        raise MathParseError("morph needs two figures: morph(F1, F2)")
+    sides = []
+    for part in parts:
+        it = _parse_item(part)
+        if it.tuple_ is not None:
+            raise MathParseError("morph works with equations, not parametric forms")
+        sides.append(it.rhs if it.lhs is None else it.lhs - it.rhs)
+    three_d = any(_names(f) & {"z", "phi"} for f in sides)
+    f1, f2 = (_to_cartesian(f, three_d) for f in sides)
+    t = sp.Symbol("t", real=True)
+    tex = rf"(1 - t)\left[{sp.latex(f1)}\right] + t\left[{sp.latex(f2)}\right] = 0"
+    return Item((1 - t) * f1 + t * f2, sp.Integer(0), tex=tex)
 
 
 def _parametric(comps: list[sp.Expr], dep: str | None = None) -> PlotSpec:
@@ -428,10 +468,12 @@ def _parametric(comps: list[sp.Expr], dep: str | None = None) -> PlotSpec:
         raise MathParseError("parametric form needs 2 or 3 components")
     names = set().union(*(_names(c) for c in comps))
     if {"u", "v"} <= names and len(comps) == 3:
-        return PlotSpec(kind="surface3d", exprs=comps, axes=["u", "v"])
+        return PlotSpec(kind="surface3d", exprs=comps, axes=["u", "v"], time="t" if "t" in names else None)
+    kind = "parametric2d" if len(comps) == 2 else "parametric3d"
+    if {"s", "t"} <= names:  # curve parameter s, time t
+        return PlotSpec(kind=kind, exprs=comps, axes=["s"], time="t")
     for p in ("t", "s", "u", "theta", "phi"):
         if p in names:
-            kind = "parametric2d" if len(comps) == 2 else "parametric3d"
             return PlotSpec(kind=kind, exprs=comps, axes=[p])
     raise MathParseError("parametric form needs a parameter t (or s, u)")
 
@@ -464,7 +506,7 @@ def _latex(items: list[Item], spec: PlotSpec) -> str:
 _WORD = re.compile(r"[A-Za-zА-Яа-яЁё]{4,}")
 _KNOWN_WORDS = set(FUNCTIONS) | set(GREEK) | {"lambda", "where", "with", "frac", "sqrt", "left", "right",
                                               "cdot", "times", "quad", "infty", "dfrac", "tfrac", "mathrm",
-                                              "operatorname", "lamda"}
+                                              "operatorname", "lamda", "morph"}
 
 
 def looks_like_math(text: str) -> bool:

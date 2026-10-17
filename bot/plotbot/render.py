@@ -32,6 +32,8 @@ SEQ = LinearSegmentedColormap.from_list("seq", ["#0d2a4d", "#1f5fa8", "#3987e5",
 DIV = LinearSegmentedColormap.from_list("div", ["#3987e5", "#9fc3ef", "#8a8a85", "#f0a382", "#d95926"])
 
 FRAMES = 40
+FRAMES_3D = 30   # 3D frames cost ~0.3-0.8 s each; keeps a GIF under the render timeout
+LIMIT_SAMPLES = 8
 FRAME_MS = 90
 DPI = 110
 
@@ -370,6 +372,66 @@ def _anim2d(fig, spec) -> bytes:
 
 
 ANIMATED = {"anim1d": _anim1d, "anim2d": _anim2d}
+THREE_D = {"explicit3d", "cylindrical", "spherical", "surface3d", "parametric3d", "implicit3d"}
+EQUAL_ASPECT = {"spherical", "surface3d", "implicit3d"}
+
+
+def _frame(spec: PlotSpec, t: float, limits=None) -> Figure:
+    """Draw a static kind at one moment, with the time variable fixed to t."""
+    fig = Figure(figsize=(8, 5.2), dpi=DPI)
+    FigureCanvasAgg(fig)
+    _style(fig)
+    _title(fig, spec, f"${_sym_tex(spec.time)} = {t:.2f}$")
+    at_t = PlotSpec(kind=spec.kind, exprs=spec.exprs, axes=spec.axes, dep=spec.dep, ranges=spec.ranges,
+                    params={**spec.params, spec.time: float(t)})
+    STATIC[spec.kind](fig, at_t)
+    fig.subplots_adjust(top=0.82)
+    if limits:
+        ax = fig.axes[0]
+        if spec.kind not in THREE_D and ax.get_aspect() != "auto":
+            ax.set_adjustable("box")
+        ax.set_xlim(*limits[0])
+        ax.set_ylim(*limits[1])
+        if spec.kind in THREE_D:
+            ax.set_zlim(*limits[2])
+            if spec.kind in EQUAL_ASPECT:
+                ax.set_box_aspect([hi - lo for lo, hi in limits])
+    return fig
+
+
+def _limits(ax) -> list[tuple[float, float]]:
+    lims = [ax.get_xlim(), ax.get_ylim()]
+    if hasattr(ax, "get_zlim"):
+        lims.append(ax.get_zlim())
+    return lims
+
+
+def _animate_shape(spec: PlotSpec) -> bytes:
+    """A shape that changes in time: one static drawing per frame, on fixed axes."""
+    t0, t1 = _rng(spec, spec.time)
+    times = np.linspace(t0, t1, FRAMES_3D if spec.kind in THREE_D else FRAMES)
+    # Axis limits from a few sample moments, so the axes don't jump between frames.
+    seen = []
+    for t in np.linspace(t0, t1, LIMIT_SAMPLES):
+        try:
+            seen.append(_limits(_frame(spec, t).axes[0]))
+        except RenderError:
+            continue
+    if not seen:
+        raise RenderError("nothing to draw at any moment in this time range")
+    limits = [(min(s[i][0] for s in seen), max(s[i][1] for s in seen)) for i in range(len(seen[0]))]
+    frames = []
+    for t in times:
+        try:
+            fig = _frame(spec, t, limits)
+        except RenderError:
+            fig = Figure(figsize=(8, 5.2), dpi=DPI)
+            FigureCanvasAgg(fig)
+            _style(fig)
+            _title(fig, spec, f"${_sym_tex(spec.time)} = {t:.2f}$")
+            fig.text(0.5, 0.45, "no real points at this moment", ha="center", color=TEXT_2, fontsize=11)
+        frames.append(_grab(fig))
+    return _frames_to_gif(frames)
 
 
 def render(spec: PlotSpec) -> tuple[bytes, str]:
@@ -381,6 +443,8 @@ def render(spec: PlotSpec) -> tuple[bytes, str]:
         _title(fig, spec)
         if spec.kind in ANIMATED:
             return ANIMATED[spec.kind](fig, spec), "plot.gif"
+        if spec.time:
+            return _animate_shape(spec), "plot.gif"
         STATIC[spec.kind](fig, spec)
         if spec.kind not in ("anim1d", "anim2d"):
             fig.subplots_adjust(top=0.82)
