@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PlotBot</title>
+  </head>
+  <body>
+    <header class="bar">
+      <h1 data-i18n="title">PlotBot</h1>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en">EN</button>
+        <button type="button" data-lang="ru">RU</button>
+      </div>
+    </header>
+
+    <main>
+      <form id="prompt-form" class="prompt">
+        <textarea id="prompt" rows="2" spellcheck="false"></textarea>
+        <button id="go" type="submit" class="primary" data-i18n="plot">Plot</button>
+      </form>
+      <details class="examples">
+        <summary data-i18n="examples">Examples</summary>
+        <div id="examples"></div>
+      </details>
+
+      <section class="formula">
+        <div id="formula"></div>
+        <p id="explanation"></p>
+        <p id="message" role="status"></p>
+      </section>
+
+      <div class="workspace">
+        <div id="plot" aria-label="Plot"></div>
+        <aside id="controls" hidden>
+          <section id="params-box">
+            <h2 data-i18n="parameters">Parameters</h2>
+            <div id="params"></div>
+          </section>
+          <section id="time-box" hidden>
+            <h2 data-i18n="time">Time</h2>
+            <div class="time-row">
+              <button id="play" type="button"></button>
+              <input id="time" type="range" min="0" max="1000" value="0" />
+              <output id="time-value"></output>
+            </div>
+            <label class="speed"><span data-i18n="speed">Speed</span>
+              <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select>
+            </label>
+          </section>
+          <section>
+            <h2 data-i18n="ranges">Ranges</h2>
+            <div id="ranges"></div>
+          </section>
+          <div class="actions">
+            <button id="reset" type="button" data-i18n="reset">Reset</button>
+            <button id="save" type="button" data-i18n="save">Save</button>
+          </div>
+          <p class="hint" data-i18n="hint"></p>
+        </aside>
+      </div>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
