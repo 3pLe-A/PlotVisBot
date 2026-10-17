@@ -1,0 +1,8 @@
+discord.py>=2.7,<3
+sympy>=1.14,<2
+numpy>=2.0
+matplotlib>=3.10
+scikit-image>=0.25
+pillow>=11
+anthropic>=1.15
+pydantic>=2.7
