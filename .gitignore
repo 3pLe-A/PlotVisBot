@@ -1,0 +1,4 @@
+# Each bot also has its own .gitignore.
+.DS_Store
+.idea/
+.vscode/

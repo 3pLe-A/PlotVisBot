@@ -1,26 +1,13 @@
+import json
+from pathlib import Path
+
 import pytest
 
 from plotbot.mathparse import MathParseError, looks_like_math, parse_math
 
-CASES = {
-    "x^2 + y^2 + z^2 = 25": "implicit3d",
-    r"x[t] = A*exp[-\lambda_1 t] + B*exp[-\lambda_2 t]": "explicit2d",
-    r"x(t) = A e^{-\lambda_1 t} + B e^{-\lambda_2 t}": "explicit2d",
-    "y = sin(k x)": "explicit2d",
-    "sin(x)": "explicit2d",
-    "r = 1 + cos(theta)": "polar",
-    "z = x^2 - y^2": "explicit3d",
-    "z = r^2 sin(theta)": "cylindrical",
-    "r = 1 + 0.3 sin(3 theta) sin(4 phi)": "spherical",
-    "u(x,t) = sin(x - c t)": "anim1d",
-    "u = exp(-(x^2+y^2)/(1+t)) cos(omega t)": "anim2d",
-    "(cos t, sin t, t/5)": "parametric3d",
-    "x = cos(3t), y = sin(2t)": "parametric2d",
-    "(cos(u) sin(v), sin(u) sin(v), cos(v))": "surface3d",
-    r"\frac{x^2}{a^2} + \frac{y^2}{b^2} = 1": "implicit2d",
-    "x² + y² = 4": "implicit2d",
-    "Sin[x]": "explicit2d",
-}
+# Shared with bot-activity, so both parsers classify input the same way.
+SHARED = json.loads((Path(__file__).resolve().parents[2] / "shared" / "parser-cases.json").read_text(encoding="utf-8"))
+CASES = SHARED["kinds"]
 
 
 @pytest.mark.parametrize("text,kind", CASES.items())
@@ -46,8 +33,7 @@ def test_range_forms():
     assert parse_math("y = x, 0 < x < pi").ranges["x"][1] == pytest.approx(3.14159, 1e-4)
 
 
-@pytest.mark.parametrize("bad", ["__import__('os')", "eval(1)", "x.real", "open(x)", "exec(x)", "lambda: 1",
-                                 "().__class__", "getattr(x, y)", "y = x; import os"])
+@pytest.mark.parametrize("bad", SHARED["rejects"] + ["lambda: 1", "getattr(x, y)", "y = x; import os"])
 def test_rejects_code(bad):
     with pytest.raises(MathParseError):
         parse_math(bad)

@@ -1,0 +1,32 @@
+{
+  "kinds": {
+    "x^2 + y^2 + z^2 = 25": "implicit3d",
+    "x[t] = A*exp[-\\lambda_1 t] + B*exp[-\\lambda_2 t]": "explicit2d",
+    "x(t) = A e^{-\\lambda_1 t} + B e^{-\\lambda_2 t}": "explicit2d",
+    "y = sin(k x)": "explicit2d",
+    "sin(x)": "explicit2d",
+    "Sin[x]": "explicit2d",
+    "r = 1 + cos(theta)": "polar",
+    "z = x^2 - y^2": "explicit3d",
+    "z = r^2 sin(theta)": "cylindrical",
+    "r = 1 + 0.3 sin(3 theta) sin(4 phi)": "spherical",
+    "u(x,t) = sin(x - c t)": "anim1d",
+    "u = exp(-(x^2+y^2)/(1+t)) cos(omega t)": "anim2d",
+    "(cos t, sin t, t/5)": "parametric3d",
+    "x = cos(3t), y = sin(2t)": "parametric2d",
+    "(cos(u) sin(v), sin(u) sin(v), cos(v))": "surface3d",
+    "\\frac{x^2}{a^2} + \\frac{y^2}{b^2} = 1": "implicit2d",
+    "x² + y² = 4": "implicit2d",
+    "y^2 = x^3 - x": "implicit2d"
+  },
+  "rejects": [
+    "__import__('os')",
+    "eval(1)",
+    "x.real",
+    "open(x)",
+    "exec(x)",
+    "().__class__",
+    "import({})",
+    "y = x; process"
+  ]
+}

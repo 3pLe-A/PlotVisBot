@@ -1,27 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { parseMath, looksLikeMath, MathParseError, compile } from "../client/src/mathparse.js";
 
-const CASES = {
-  "x^2 + y^2 + z^2 = 25": "implicit3d",
-  "x[t] = A*exp[-\\lambda_1 t] + B*exp[-\\lambda_2 t]": "explicit2d",
-  "x(t) = A e^{-\\lambda_1 t} + B e^{-\\lambda_2 t}": "explicit2d",
-  "y = sin(k x)": "explicit2d",
-  "sin(x)": "explicit2d",
-  "r = 1 + cos(theta)": "polar",
-  "z = x^2 - y^2": "explicit3d",
-  "z = r^2 sin(theta)": "cylindrical",
-  "r = 1 + 0.3 sin(3 theta) sin(4 phi)": "spherical",
-  "u(x,t) = sin(x - c t)": "anim1d",
-  "u = exp(-(x^2+y^2)/(1+t)) cos(omega t)": "anim2d",
-  "(cos t, sin t, t/5)": "parametric3d",
-  "x = cos(3t), y = sin(2t)": "parametric2d",
-  "(cos(u) sin(v), sin(u) sin(v), cos(v))": "surface3d",
-  "\\frac{x^2}{a^2} + \\frac{y^2}{b^2} = 1": "implicit2d",
-  "x² + y² = 4": "implicit2d",
-  "Sin[x]": "explicit2d",
-  "r = 2 + sin(3 theta) sin(phi)": "spherical",
-};
+// Shared with bot-buttons, so both parsers classify input the same way.
+const SHARED = JSON.parse(readFileSync(new URL("../../shared/parser-cases.json", import.meta.url), "utf8"));
+const CASES = { ...SHARED.kinds, "r = 2 + sin(3 theta) sin(phi)": "spherical" };
 
 for (const [text, kind] of Object.entries(CASES)) {
   test(`kind of ${text}`, () => assert.equal(parseMath(text).kind, kind));
@@ -41,8 +25,7 @@ test("assignment before formula and range forms", () => {
   assert.deepEqual(parseMath("y = x, x = -1..2").ranges.x, [-1, 2]);
 });
 
-for (const bad of ["__import__('os')", "eval(1)", "x.constructor", "import({})", "createUnit(x)",
-  "evaluate(x)", "parse(x)", "y = x; process"]) {
+for (const bad of [...SHARED.rejects, "x.constructor", "createUnit(x)", "evaluate(x)", "parse(x)"]) {
   test(`rejects ${bad}`, () => assert.throws(() => parseMath(bad), MathParseError));
 }
 

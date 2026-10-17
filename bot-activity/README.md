@@ -2,7 +2,7 @@
 
 A Discord Activity (a web app that runs inside Discord) that turns a prompt into a live plot. Each parameter gets a slider that redraws the plot as you drag. 3D plots rotate and zoom with the mouse or touch, and time-dependent plots play, pause and scrub.
 
-The sister project `plotbot-discord` is the classic bot version, where buttons and a form redraw an image.
+The other bot in this repository, [`bot-buttons`](../bot-buttons), is the classic version, where buttons and a form redraw an image.
 
 The same app also runs **standalone on localhost**, so you can test everything except Discord sign-in in an ordinary browser.
 
@@ -106,7 +106,7 @@ client/
   src/i18n.js               English and Russian strings, examples
 server/
   index.js                  Express: OAuth token, /interactions, translation, saved plots
-  nl.js                     natural language -> math via Claude
+  nl.js                     natural language -> math via Claude (prompt in ../shared/nl)
   db.js                     SQLite store and retention
 scripts/register-commands.js
 test/                       node:test suites

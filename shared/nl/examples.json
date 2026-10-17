@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "damped oscillator with frequency 3",
+    "answer": {
+      "ok": true,
+      "math": "x(t) = A exp(-gamma t) cos(omega t), A=1, gamma=0.3, omega=3, t in [0, 20]",
+      "explanation": "Damped harmonic oscillation x(t)."
+    }
+  },
+  {
+    "prompt": "сфера радиуса 5",
+    "answer": {
+      "ok": true,
+      "math": "x^2 + y^2 + z^2 = R^2, R=5",
+      "explanation": "Сфера радиуса R с центром в начале координат."
+    }
+  }
+]
