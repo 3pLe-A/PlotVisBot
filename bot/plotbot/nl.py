@@ -12,7 +12,7 @@ from pathlib import Path
 import anthropic
 from pydantic import BaseModel
 
-# Prompt and examples are shared with bot-activity (../shared/nl).
+# Prompt and examples are shared with activity-type (../shared/nl).
 SHARED = Path(__file__).resolve().parents[2] / "shared" / "nl"
 SYSTEM = (SHARED / "system.txt").read_text(encoding="utf-8")
 EXAMPLES = [(e["prompt"], json.dumps(e["answer"], ensure_ascii=False))

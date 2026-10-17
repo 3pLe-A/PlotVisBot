@@ -7,7 +7,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 
-// Prompt and examples are shared with bot-buttons (../shared/nl).
+// Prompt and examples are shared with bot (../shared/nl).
 const shared = new URL("../../shared/nl/", import.meta.url);
 const SYSTEM = readFileSync(new URL("system.txt", shared), "utf8");
 const EXAMPLES = JSON.parse(readFileSync(new URL("examples.json", shared), "utf8"))

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { parseMath, looksLikeMath, MathParseError, compile } from "../client/src/mathparse.js";
 
-// Shared with bot-buttons, so both parsers classify input the same way.
+// Shared with bot, so both parsers classify input the same way.
 const SHARED = JSON.parse(readFileSync(new URL("../../shared/parser-cases.json", import.meta.url), "utf8"));
 const CASES = { ...SHARED.kinds, "r = 2 + sin(3 theta) sin(phi)": "spherical" };
 

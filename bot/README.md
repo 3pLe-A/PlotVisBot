@@ -2,7 +2,7 @@
 
 A Discord bot that turns a prompt into a plot. Typed math (LaTeX, plain or Mathematica-style) is parsed directly. A natural-language prompt (English or Russian) is first rewritten as math by Claude, then plotted. Every plot has controls for its parameters: buttons step a value up or down, and a pop-up form sets exact values and the axis range. Each change redraws the image in the same message.
 
-The other bot in this repository, [`bot-activity`](../bot-activity), is the Discord Activity version, with live sliders and 3D rotation.
+The other bot in this repository, [`activity-type`](../activity-type), is the Discord Activity version, with live sliders and 3D rotation.
 
 ## What it draws
 

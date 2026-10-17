@@ -2,7 +2,7 @@
 
 Two Discord bots that turn a prompt into an interactive plot. Typed math (LaTeX, plain or Mathematica-style) is plotted directly. A natural-language prompt in English or Russian is first rewritten as math by Claude, then plotted. Both bots take the same input, understand the same 12 plot types and keep only text in their database. They differ in how you change a plot's parameters:
 
-| | [`bot-buttons`](bot-buttons) | [`bot-activity`](bot-activity) |
+| | [`bot`](bot) | [`activity-type`](activity-type) |
 |---|---|---|
 | Runs as | an ordinary Discord bot (Python) | a Discord Activity: a web app inside Discord (Node/npm) |
 | Changing parameters | buttons step a value; a pop-up form sets exact values and ranges | live sliders, drag-to-rotate 3D, play/pause for time |
@@ -13,8 +13,8 @@ Two Discord bots that turn a prompt into an interactive plot. Typed math (LaTeX,
 ## Layout
 
 ```
-bot-buttons/    Python bot: /plot, /tex, /language, /help; buttons and form; Matplotlib renderer
-bot-activity/   Activity: Vite + Plotly client, Express server, optional /plot launcher command
+bot/            Python bot: /plot, /tex, /language, /help; buttons and form; Matplotlib renderer
+activity-type/  Activity: Vite + Plotly client, Express server, optional /plot launcher command
 shared/
   nl/                 prompt and examples Claude uses to rewrite natural language as math (both bots)
   parser-cases.json   inputs both parsers must classify identically, plus inputs both must refuse
@@ -36,16 +36,16 @@ Each bot has its own README with setup steps, its own `.env.example` and its own
 | `r = 1 + 0.3 sin(3 theta) sin(4 phi)` | spherical surface |
 | `x^2 + y^2 + z^2 = 25` | implicit surface |
 | `(cos(u) sin(v), sin(u) sin(v), cos(v))` | parametric surface |
-| `u(x,t) = sin(x - c t)` | 1D + time, with a spacetime diagram |
-| `u = exp(-(x^2+y^2)/(1+t)) cos(omega t)` | 2D + time |
+| `u(x,t) = sin(x - c t)` | 1 space dimension and 1 time dimension, with a spacetime diagram |
+| `u = exp(-(x^2+y^2)/(1+t)) cos(omega t)` | 2 space dimensions and 1 time dimension |
 
 Every symbol that isn't a coordinate (`x y z t r theta phi`) becomes an adjustable parameter. You can add `, A=2` to set a starting value and `, x in [0, 10]` to set a range.
 
 ## Tests
 
 ```bash
-cd bot-buttons && pip install -r requirements-dev.txt && python -m pytest
-cd bot-activity && npm install && npm test
+cd bot && pip install -r requirements-dev.txt && python -m pytest
+cd activity-type && npm install && npm test
 ```
 
 Both suites read `shared/parser-cases.json`, so a change to one parser that the other doesn't match shows up as a failing test.

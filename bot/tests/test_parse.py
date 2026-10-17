@@ -5,7 +5,7 @@ import pytest
 
 from plotbot.mathparse import MathParseError, looks_like_math, parse_math
 
-# Shared with bot-activity, so both parsers classify input the same way.
+# Shared with activity-type, so both parsers classify input the same way.
 SHARED = json.loads((Path(__file__).resolve().parents[2] / "shared" / "parser-cases.json").read_text(encoding="utf-8"))
 CASES = SHARED["kinds"]
 

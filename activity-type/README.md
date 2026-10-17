@@ -2,7 +2,7 @@
 
 A Discord Activity (a web app that runs inside Discord) that turns a prompt into a live plot. Each parameter gets a slider that redraws the plot as you drag. 3D plots rotate and zoom with the mouse or touch, and time-dependent plots play, pause and scrub.
 
-The other bot in this repository, [`bot-buttons`](../bot-buttons), is the classic version, where buttons and a form redraw an image.
+The other bot in this repository, [`bot`](../bot), is the classic version, where buttons and a form redraw an image.
 
 The same app also runs **standalone on localhost**, so you can test everything except Discord sign-in in an ordinary browser.
 
